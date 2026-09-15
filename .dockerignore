@@ -1,5 +1,6 @@
-# 构建上下文只需要 backend/ + frontend 源码 + serve.py。
-# 不排除的话 node_modules(119M) / .venv(36M) / data(30M) 全被打包上传，构建又慢又大。
+# The build context only needs backend/, the frontend sources and serve.py.
+# Without these excludes, node_modules (119M) and .venv (36M) get uploaded too,
+# making the build slow and the image large.
 **/node_modules
 **/.venv
 **/__pycache__
@@ -7,7 +8,7 @@
 **/.pytest_cache
 frontend/dist
 
-# 密钥与运行时状态绝不进镜像
+# Secrets and runtime state must never enter the image
 .env
 .env.*
 !.env.sample
@@ -17,10 +18,11 @@ backend/profile/memory/*.json
 backend/profile/*.db
 backend/profile/analysis
 
-# 主办方数据包（赛后须删除，见 CHALLENGE_AGREEMENT.md §2）——运行时也不再需要
+# Hackathon-provided dataset (to be deleted after the event, see
+# CHALLENGE_AGREEMENT.md section 2) — no longer needed at runtime either
 data/
 
-# 演示不需要的文档与素材
+# Docs and assets the running demo does not need
 .git
 .github
 guides/

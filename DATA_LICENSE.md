@@ -25,10 +25,11 @@ JamendoMaxCaps dataset (AMAAI Lab).
 
 ## Demo catalog (`backend/data/demo_catalog.json`)
 
-赛后 Cyanite API 下线，检索改用这份本地曲库。它由 `backend/build_catalog.py` 从
-**Jamendo 公开 API** 抓取，只含曲目元数据（id、曲名、艺术家、时长、标签、许可链接），
-适用与上面相同的 CC BY-SA 3.0 / 每曲各自的 Creative Commons 条款。
-**不含任何 Cyanite 模型输出。**
+After the event the Cyanite API was retired, and search now uses this local catalog.
+It is harvested by `backend/build_catalog.py` from the **public Jamendo API** and holds
+track metadata only (id, title, artist, duration, tags, licence URL). The same CC BY-SA 3.0
+terms and the per-track Creative Commons licences described above apply.
+**It contains no Cyanite model output.**
 
 ## Cyanite analysis
 

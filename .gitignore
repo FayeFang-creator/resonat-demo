@@ -3,9 +3,10 @@
 .env.*
 !.env.sample
 
-# --- 赛后合规（CHALLENGE_AGREEMENT.md §2）---
-# 主办方数据包与任何 Cyanite 模型输出都不得进入本仓库：
-# 协议要求不得发布/再分发，且赛后须删除。本仓库的检索不依赖它们。
+# --- Post-event compliance (CHALLENGE_AGREEMENT.md, section 2) ---
+# Neither the hackathon-provided dataset nor any Cyanite model output may enter
+# this repository: the agreement forbids redistributing them and requires their
+# deletion after the event. Retrieval here does not depend on them.
 /data/
 /response_*.json
 /guides/

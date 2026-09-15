@@ -79,7 +79,7 @@ This repository currently contains:
 |---|---|
 | [`frontend/`](frontend/) | React + TypeScript + Vite experience for prompt input, results, feedback, explanations, and "sounds like you" cards |
 | [`backend/`](backend/) | FastAPI service that owns sessions, intent compilation, catalog search, explanations, and markdown memory |
-| [`backend/data/`](backend/data/) | `demo_catalog.json` — 2401 首 Jamendo 曲的公开元数据（CC BY-SA），检索的唯一数据源 |
+| [`backend/data/`](backend/data/) | `demo_catalog.json` — public metadata for 2,401 Jamendo tracks (CC BY-SA); the only data source search uses |
 | [`PRD-night.md`](PRD-night.md) | One-night sprint PRD that defines the confirmation gate, feedback loop, and no-database memory model |
 | [`GETTING_STARTED.md`](GETTING_STARTED.md) | Chinese setup guide used by the team during development |
 
@@ -176,13 +176,13 @@ stored as two markdown files per user under `backend/memory/`; there is no datab
 ├── backend/
 │   ├── app.py                 # FastAPI routes and request/response contracts
 │   ├── orchestrator.py        # prompt -> search -> feedback -> memory loop
-│   ├── catalog.py             # 本地曲库检索（取代已下线的 Cyanite）
+│   ├── catalog.py             # local catalog search (replaces the retired Cyanite client)
 │   ├── intent_agent.py        # Query Card and search-argument generation
 │   ├── explanation_builder.py # grounded English recommendation explanations
 │   ├── memory.py              # markdown evidence/profile storage
 │   ├── rerank.py              # refill candidate ranking helpers
-│   ├── build_catalog.py       # 构建期：从公开 Jamendo API 抓曲库（跑一次）
-│   └── data/demo_catalog.json # 检索用的本地曲库
+│   ├── build_catalog.py       # build-time: harvest the catalog from the public Jamendo API
+│   └── data/demo_catalog.json # the local catalog that search runs against
 │   └── test_*.py              # focused backend tests
 ├── frontend/
 │   ├── src/App.tsx            # route shell
@@ -191,8 +191,8 @@ stored as two markdown files per user under `backend/memory/`; there is no datab
 │   └── src/api.ts             # typed API client for the FastAPI backend
 ├── start.sh                   # one-shot full-stack dev startup
 ├── dev.sh                     # smaller backend/frontend startup helper
-├── serve.py                   # 线上入口：同源站同时供前端与 /api
-├── Dockerfile                 # 单镜像部署（HF Spaces / 任意容器平台）
+├── serve.py                   # deploy entrypoint: one origin serves frontend + /api
+├── Dockerfile                 # single-image deploy (HF Spaces or any container host)
 └── .env.sample                # optional keys template
 ```
 
@@ -204,8 +204,8 @@ stored as two markdown files per user under `backend/memory/`; there is no datab
 |---|---|---|
 | **Backend** | Python 3.13 + [`uv`](https://docs.astral.sh/uv/) | FastAPI, Uvicorn, Requests, HTTPX, python-dotenv, pytest |
 | **Frontend** | Node.js 20+ + npm | React 19, React DOM, React Router, Vite, TypeScript, Tailwind CSS, motion, OGL, oxlint |
-| **Data** | Local JSON | `backend/data/demo_catalog.json`（公开 Jamendo 元数据，CC BY-SA）|
-| **External APIs** | HTTP | 运行时无必需外部 API；可选 Jamendo 下载代理、可选 OpenAI Responses API |
+| **Data** | Local JSON | `backend/data/demo_catalog.json` (public Jamendo metadata, CC BY-SA) |
+| **External APIs** | HTTP | None required at runtime; optional Jamendo download proxy, optional OpenAI Responses API |
 | **Memory** | Markdown files | `backend/memory/<user_id>.evidence.md` and `backend/memory/<user_id>.memory.md` generated at runtime |
 
 Backend dependency versions are locked by [`backend/uv.lock`](backend/uv.lock).
@@ -215,16 +215,16 @@ Frontend dependency versions are locked by [`frontend/package-lock.json`](fronte
 
 ## ⚙️ Configuration
 
-**演示不需要任何密钥。** 直接跑就行；下面这些全是可选增强：
+**The demo needs no keys.** Just run it — everything below is an optional enhancement:
 
 | Variable | Required? | Purpose |
 |---|---:|---|
-| `OPENAI_API_KEY` | Optional | 开启 LLM 版意图解读与推荐解释；不填走确定性兜底（功能完整，文案更朴素）|
-| `OPENAI_MODEL` / `OPENAI_BASE_URL` / `OPENAI_TIMEOUT` | Optional | 见 [`backend/config.py`](backend/config.py) |
-| `JAMENDO_CLIENT_ID` | Optional | 开启高音质下载代理；重建曲库（`build_catalog.py`）时必填。这是**公开**标识符而非密钥，可直接作为部署平台的普通环境变量 |
+| `OPENAI_API_KEY` | Optional | Enables LLM-written interpretations and explanations. Without it, deterministic fallbacks run instead — fully functional, plainer copy |
+| `OPENAI_MODEL` / `OPENAI_BASE_URL` / `OPENAI_TIMEOUT` | Optional | See [`backend/config.py`](backend/config.py) |
+| `JAMENDO_CLIENT_ID` | Optional | Enables the high-quality download proxy; required to rebuild the catalog (`build_catalog.py`). A **public** identifier, not a secret — safe as a plain environment variable on your deploy platform |
 
-不填 `JAMENDO_CLIENT_ID` 时下载按钮返回 503，其余功能不受影响。
-`.env` 已被 git 忽略，由 [`backend/config.py`](backend/config.py) 从仓库根加载。
+Without `JAMENDO_CLIENT_ID` the download button returns 503; nothing else is affected.
+`.env` is git-ignored and is loaded from the repository root by [`backend/config.py`](backend/config.py).
 
 ## 🚀 Run locally
 
@@ -275,25 +275,26 @@ npm install
 npm run dev
 ```
 
-### 像线上一样跑（单源站，无 Vite）
+### Run it the way it is deployed (single origin, no Vite)
 
 ```bash
 cd frontend && npm run build && cd .. && uv run --project backend uvicorn serve:root --port 7860
 ```
 
-打开 http://localhost:7860 —— 前端与 `/api` 同源，和部署后的形态一致。
+Open http://localhost:7860 — the frontend and `/api` share one origin, exactly as in production.
 
-### 部署
+### Deploy
 
-[`Dockerfile`](Dockerfile) 打成单镜像（前端构建 + 后端 + 本地曲库），监听 `7860`，
-直接对应 Hugging Face Spaces 的 Docker SDK；任意容器平台同样可跑。
+[`Dockerfile`](Dockerfile) builds a single image (frontend build + backend + local catalog)
+listening on `7860`, which maps directly onto Hugging Face Spaces' Docker SDK. Any container
+host works too.
 
 ```bash
 docker build -t sounds-like-you . && docker run -p 7860:7860 sounds-like-you
 ```
 
-**不需要配置任何 secret。** 想开启高音质下载，把 `JAMENDO_CLIENT_ID` 加成普通环境变量即可
-（它是公开标识符，不是密钥）。
+**No secrets to configure.** To enable high-quality downloads, add `JAMENDO_CLIENT_ID` as a
+plain environment variable (it is a public identifier, not a secret).
 
 ---
 
@@ -313,12 +314,14 @@ docker build -t sounds-like-you . && docker run -p 7860:7860 sounds-like-you
 | `POST /explain-sounds-like-you` | Explain a profile-based track |
 | `GET /download/{track_id}` | Proxy a Jamendo MP3 download (needs `JAMENDO_CLIENT_ID`) |
 
-开发时前端经 Vite 的 `/api` 代理访问这些路由；线上由 [`serve.py`](serve.py) 把后端挂在
-同一源站的 `/api` 下，所以浏览器代码始终用相对路径如 `/api/intent`。
+In development the frontend reaches these routes through Vite's `/api` proxy; in production
+[`serve.py`](serve.py) mounts the backend at `/api` on the same origin, so browser code always
+uses relative paths such as `/api/intent`.
 
 ## 🧪 Verification
 
-后端测试完全离线（检索本来就不打网络，LLM 接缝被 monkeypatch）：
+The backend tests are fully offline — search never touches the network, and the LLM seams are
+monkeypatched:
 
 ```bash
 cd backend
@@ -346,45 +349,49 @@ Expected health response:
 {"ok":true}
 ```
 
-检索层单独自检（不打网络）：
+Self-check the retrieval layer on its own (no network):
 
 ```bash
 cd backend && uv run python catalog.py
 ```
 
-端到端：打开 `http://localhost:5173`，输入 prompt，确认 Query Card，然后 like/dislike
-并打开 "Why this track?"。换两个语义差别大的 prompt（如 `lonely midnight train ride`
-与 `sunny morning workout energy`），结果应当明显不同。
+End to end: open `http://localhost:5173`, enter a prompt, confirm the Query Card, then
+like/dislike and open "Why this track?". Try two semantically distant prompts (for example
+`lonely midnight train ride` vs `sunny morning workout energy`) — the results should differ
+noticeably.
 
 ---
 
 ## 🎧 Data and API notes
 
-> **赛后状态（2026-09）**：Cyanite 的 `private-alpha` 检索/相似端点已下线（404），
-> API key 已吊销（401）。检索层因此换成仓库内的本地曲库，**不再需要任何 API key**。
+> **Post-hackathon status (September 2026):** Cyanite's `private-alpha` search and similarity
+> endpoints are gone (404) and the issued key is revoked (401). Retrieval was therefore moved to
+> a local catalog inside this repository, and **no API key is needed any more**.
 
 | Id | Meaning |
 |---|---|
-| `track_id` | Jamendo numeric track id — 音频、展示、下载都用它 |
-| `cyanite_id` | 历史字段名，现在**等于** `track_id`（双 id 体系已取消，前端契约不变）|
+| `track_id` | Jamendo numeric track id — used for audio, display and download |
+| `cyanite_id` | Legacy field name; now **equal to** `track_id` (the dual-id scheme is gone, the frontend contract is unchanged) |
 
-检索全部在 [`backend/catalog.py`](backend/catalog.py) 内完成，零网络：
+All retrieval happens inside [`backend/catalog.py`](backend/catalog.py), with zero network calls:
 
-| 原 Cyanite 能力 | 现在的实现 |
+| Former Cyanite capability | How it works now |
 |---|---|
-| Text prompt search | `search_by_prompt()` — IDF 加权标签/词面匹配 + 速度档位 |
-| Single-seed similarity | `find_similar()` — 种子标签的 IDF 加权近邻 |
-| Multi-seed similarity | `find_similar_multi()` — 多种子标签并集 |
+| Text prompt search | `search_by_prompt()` — IDF-weighted tag and term matching, plus a speed band |
+| Single-seed similarity | `find_similar()` — IDF-weighted nearest neighbours over the seed's tags |
+| Multi-seed similarity | `find_similar_multi()` — union of the seeds' tags |
 | Model outputs / tags | `model_tags()` — Jamendo `musicinfo`（genre / mood / instruments / speed / vocals）|
 
-曲库 `backend/data/demo_catalog.json`（2401 首）由
-[`backend/build_catalog.py`](backend/build_catalog.py) 一次性从公开 Jamendo API 抓取，
-只有构建期需要 `JAMENDO_CLIENT_ID`。音频由 Jamendo 公开 CDN 直供浏览器，无需 key。
+The catalog `backend/data/demo_catalog.json` (2,401 tracks) is harvested once from the public
+Jamendo API by [`backend/build_catalog.py`](backend/build_catalog.py); only that build step needs
+`JAMENDO_CLIENT_ID`. Audio is served to the browser straight from Jamendo's public CDN, no key
+involved.
 
-**这是词面匹配，不是音频语义检索** —— 这是公开数据能做到的诚实上限。要恢复真正的语义
-检索，下一步是用 [JamendoMaxCaps](https://huggingface.co/datasets/amaai-lab/JamendoMaxCaps)
-的 `final_caption30sec.jsonl`（CC BY-SA 3.0，主键就是 Jamendo track id）建本地 caption
-向量索引；`catalog.py` 的对外接口无需改动。
+**This is term matching, not audio-semantic search** — the honest ceiling of what public data
+allows. To restore real semantic retrieval, the next step is a local caption-vector index built
+from [JamendoMaxCaps](https://huggingface.co/datasets/amaai-lab/JamendoMaxCaps)'
+`final_caption30sec.jsonl` (CC BY-SA 3.0, keyed by Jamendo track id); `catalog.py`'s public
+interface would not need to change.
 
 ## 🧹 Maintenance
 
@@ -392,7 +399,7 @@ Do not commit local runtime state:
 
 | Path | Why |
 |---|---|
-| `.env` | Local API keys（演示本身不需要）|
+| `.env` | Local API keys (the demo itself needs none) |
 | `backend/.venv/` | Local Python environment |
 | `frontend/node_modules/` | Local npm install |
 | `backend/memory/*.md` | Runtime user memory |

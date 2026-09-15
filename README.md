@@ -2,7 +2,7 @@
 
 # Sounds Like You
 
-**An audio-first music discovery demo for HACKATUNE 2026**
+**An audio-first music discovery demo, built at HACKATUNE 2026 and kept running since**
 
 Turn a listener's messy natural-language mood into explainable recommendations,
 grounded in an offline audio-tag catalog and refined through lightweight taste memory.
@@ -12,9 +12,53 @@ grounded in an offline audio-tag catalog and refined through lightweight taste m
 [![Python](https://img.shields.io/badge/python-3.13-blue.svg)](backend/pyproject.toml)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
-[How it works](#-how-it-works) · [Architecture](#-architecture) · [Dependencies](#-dependencies) · [Run](#-run-locally) · [API](#-api-surface) · [Verification](#-verification)
+[Origin & credits](#-origin-and-credit-where-it-is-due) · [How it works](#-how-it-works) · [Architecture](#-architecture) · [Dependencies](#-dependencies) · [Run](#-run-locally) · [API](#-api-surface) · [Verification](#-verification)
 
 </div>
+
+---
+
+## 🏛️ Origin, and credit where it is due
+
+This project was built at **[HACKATUNE 2026](https://munichmusiclabs.com/events/hackatune-2026/)**
+(Munich Music Labs × Cyanite, Munich, 26–28 June 2026) — see also the
+[TUM event page](https://www.tum.de/en/news-and-events/events/details/hackatune-2026-by-munich-music-labs).
+Cyanite set the challenge: build audio-first, explainable music discovery on their
+Search and Tagging API.
+
+**Almost everything that makes this app interesting was built by the original team over that
+weekend** — the confirmation gate, the like/dislike refill loop, the markdown taste-memory model,
+the "Why this track?" explanation system, and the whole FastAPI orchestration behind them.
+
+Original team, from the commit history of
+[`Hurwitzzz/resonat_hackatune`](https://github.com/Hurwitzzz/resonat_hackatune) (89 commits):
+
+- **[@Hurwitzzz](https://github.com/Hurwitzzz)** — Hewei Gao
+- **[@CAgGen](https://github.com/CAgGen)**
+- **[@baobaihong](https://github.com/baobaihong)** — Baihong Bao
+- **[@johanna0626](https://github.com/johanna0626)** — Yihao Wang
+
+The design system and UI mockups the frontend is built on came from a parallel repository by
+**[@FayeFang-creator](https://github.com/FayeFang-creator)** during the same event.
+
+That repository remains the record of the original work. **This one is a continuation, not a
+replacement** — if you want to see what the team shipped at the hackathon, look there.
+
+### Why this repository exists
+
+After the event, the sponsor API was switched off — Cyanite's search and similarity endpoints
+now return 404 and the issued key returns 401 — so the hackathon build stopped working: enter a
+prompt, and the page dead-ends on an error. This repository exists to carry the project forward:
+
+1. **Keep it runnable.** Search is re-implemented against a local, self-contained catalog of
+   public Jamendo metadata, so the demo runs with **no API key and no external dependency** and
+   will not rot when someone else's service goes away. See
+   [Data and API notes](#-data-and-api-notes) for exactly what was traded away — this is tag
+   matching, not the audio-semantic search Cyanite provided.
+2. **Refine the frontend and the interaction design,** which is the ongoing work here.
+
+No hackathon-provided dataset or Cyanite model output is included in this repository; per the
+challenge agreement those may not be redistributed. The retrieval here does not need them.
 
 ---
 
@@ -373,6 +417,7 @@ git status --short
 
 <div align="center">
 
-Built for **HACKATUNE 2026** · Audio-first discovery with explainable recommendations
+Built by the original team at **[HACKATUNE 2026](https://munichmusiclabs.com/events/hackatune-2026/)**
+(Munich Music Labs × Cyanite) · continued here
 
 </div>

@@ -1,0 +1,155 @@
+import { useCallback, useEffect, useRef, useState } from "react";
+
+export interface PlayerTrack {
+  id: string;
+  url: string;
+}
+
+const PRELOAD_TIMEOUT_MS = 20000;
+
+// Module-level handle to the player instance currently producing sound. Each
+// hook instance only pauses its OWN audio elements, so without this every
+// instance on the page (the playlist fan, the liked-songs shelf, the
+// "sounds like you" card) would play over the top of each other. Whoever
+// starts playing stops whoever was playing before — one track across the page.
+let activeStopRef: { current: () => void } | null = null;
+
+// Manages one-at-a-time audio playback for a small set of tracks, plus a
+// SEQUENTIAL preload queue (one request at a time) so we don't trip Jamendo's
+// burst rate-limiting.
+export function useAudioPlayer(
+  tracks: PlayerTrack[],
+  // Indices into `tracks` controlling preload order (e.g. middle card first).
+  preloadOrder?: number[],
+) {
+  const [playingId, setPlayingId] = useState<string | null>(null);
+  const [unavailable, setUnavailable] = useState<Set<string>>(new Set());
+  const audiosRef = useRef<Map<string, HTMLAudioElement>>(new Map());
+
+  const markUnavailable = useCallback((id: string) => {
+    setUnavailable((prev) => (prev.has(id) ? prev : new Set(prev).add(id)));
+  }, []);
+
+  useEffect(() => {
+    const audios = new Map<string, HTMLAudioElement>();
+    for (const track of tracks) {
+      const audio = new Audio();
+      audio.preload = "none";
+      audio.src = track.url;
+      audios.set(track.id, audio);
+    }
+    audiosRef.current = audios;
+
+    // Sequential preload: warm one file at a time. Preload is BEST-EFFORT — a
+    // transient throttle here must not flag a track (it usually plays fine on
+    // hover, and StrictMode teardown also fires spurious errors). Only a real
+    // play() failure marks a track unavailable (see `play`).
+    const order = preloadOrder ?? tracks.map((_, i) => i);
+    let cancelled = false;
+    let cursor = 0;
+
+    const preloadNext = () => {
+      if (cancelled || cursor >= order.length) return;
+      const track = tracks[order[cursor]];
+      const audio = track && audios.get(track.id);
+      if (!track || !audio) {
+        cursor += 1;
+        preloadNext();
+        return;
+      }
+
+      let settled = false;
+      const advance = () => {
+        if (settled) return;
+        settled = true;
+        window.clearTimeout(timer);
+        audio.removeEventListener("canplaythrough", advance);
+        audio.removeEventListener("error", advance);
+        cursor += 1;
+        preloadNext();
+      };
+
+      // Move on whether the file buffered, errored, or timed out.
+      audio.addEventListener("canplaythrough", advance, { once: true });
+      audio.addEventListener("error", advance, { once: true });
+      const timer = window.setTimeout(advance, PRELOAD_TIMEOUT_MS);
+
+      audio.preload = "auto";
+      audio.load();
+    };
+
+    preloadNext();
+
+    return () => {
+      cancelled = true;
+      for (const audio of audios.values()) {
+        audio.pause();
+        audio.removeAttribute("src");
+      }
+      audiosRef.current = new Map();
+    };
+  }, [tracks, preloadOrder]);
+
+  const stop = useCallback(() => {
+    for (const audio of audiosRef.current.values()) audio.pause();
+    setPlayingId(null);
+  }, []);
+
+  // Stable per-instance handle so other instances can stop this one. Kept in
+  // sync with the latest `stop` on every render.
+  const stopRef = useRef(stop);
+  stopRef.current = stop;
+
+  // On unmount, relinquish the page-wide "active player" slot if we hold it.
+  useEffect(
+    () => () => {
+      if (activeStopRef === stopRef) activeStopRef = null;
+    },
+    [],
+  );
+
+  const play = useCallback(
+    (id: string) => {
+      const audios = audiosRef.current;
+      const target = audios.get(id);
+      if (!target) return;
+      // Stop whatever was playing elsewhere on the page, then claim the slot.
+      if (activeStopRef && activeStopRef !== stopRef) activeStopRef.current();
+      activeStopRef = stopRef;
+      for (const [key, audio] of audios) {
+        if (key !== id) audio.pause();
+      }
+      target.preload = "auto";
+      void target
+        .play()
+        .then(() => setPlayingId(id))
+        .catch(() => {
+          setPlayingId((current) => (current === id ? null : current));
+          // Only flag genuinely unplayable resources: DECODE (3) or
+          // SRC_NOT_SUPPORTED (4). ABORTED (1) and NETWORK (2) are transient
+          // (Jamendo throttling / hovering away) and can recover on retry.
+          // A blocked-autoplay rejection leaves `target.error` null.
+          const code = target.error?.code;
+          if (code === 3 || code === 4) markUnavailable(id);
+        });
+    },
+    [markUnavailable],
+  );
+
+  // Jump to a timestamp (seconds) and play — used by the explanation footnotes.
+  const seek = useCallback(
+    (id: string, seconds: number) => {
+      const target = audiosRef.current.get(id);
+      if (!target) return;
+      try {
+        target.currentTime = seconds;
+      } catch {
+        // currentTime can throw before metadata loads; play() below still starts it.
+      }
+      play(id);
+    },
+    [play],
+  );
+
+  return { playingId, unavailable, play, stop, seek };
+}

@@ -1,0 +1,178 @@
+@import "tailwindcss";
+
+:root {
+  --ink: #1B1B1B;
+  --paper: #E5E1D6;
+  --red: #ED2024;
+  --green: #189A4C;
+  --pink: #F45CA0;
+  --blue: #2C5BC7;
+  --yellow: #F6B400;
+  --color-bg: var(--ink);
+  --color-surface: var(--ink);
+  --color-stage: var(--ink);
+  --color-text: var(--paper);
+  --color-text-soft: rgba(229,225,214,.62);
+  --color-border: rgba(229,225,214,.16);
+  --color-accent: var(--red);
+  --color-focus: var(--blue);
+  --font-display: "Courier Prime", "Courier New", ui-monospace, monospace;
+  --font-serif: "Playfair Display", Georgia, serif;
+  --font-sans: "Courier Prime", "Courier New", ui-monospace, monospace;
+  --shadow-block: 6px 6px 0 0 var(--paper);
+  font-family: var(--font-sans);
+  line-height: 1.5;
+  color-scheme: dark;
+  color: var(--color-text);
+  background: var(--color-bg);
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--color-bg);
+}
+
+button {
+  font: inherit;
+}
+
+button:focus-visible,
+[role="button"]:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+.grainient-background {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+  background: var(--ink);
+}
+
+.grainient-stage {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: max(1080px, 120vw);
+  height: max(1080px, 120vh);
+  transform: translate(-50%, -50%);
+}
+
+.grainient-shade {
+  position: absolute;
+  inset: 0;
+}
+
+.grainient-shade {
+  background: rgba(0, 0, 0, .24);
+}
+
+.font-display {
+  font-family: var(--font-display);
+}
+
+.font-serif {
+  font-family: var(--font-serif);
+}
+
+.font-sans {
+  font-family: var(--font-sans);
+}
+
+::view-transition-group(*) {
+  animation-duration: 900ms;
+  animation-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 600ms;
+}
+
+.start-page-content,
+.start-page-copy,
+.find-sound-button {
+  transition:
+    opacity 900ms cubic-bezier(0.2, 0.8, 0.2, 1),
+    transform 900ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.start-page-transitioning .start-page-content {
+  opacity: 0.72;
+  transform: translateX(-28vw) scale(0.78);
+  transform-origin: center;
+}
+
+.start-page-transitioning .start-page-copy,
+.start-page-transitioning .find-sound-button {
+  opacity: 0;
+  transform: translateY(-14px);
+}
+
+/* Building the sound brief: a typewriter status line that types itself out
+   beneath the memos, echoing the memo's own blinking block caret. Mono, flat,
+   no blur — sits below the notes so it never covers them. */
+.memo-typed {
+  display: inline-block;
+  overflow: hidden;
+  white-space: nowrap;
+  width: 0;
+  vertical-align: bottom;
+  border-right: 9px solid var(--paper);
+  animation:
+    memo-type 3.2s steps(22) infinite,
+    memo-caret 760ms steps(2, jump-none) infinite;
+}
+
+@keyframes memo-type {
+  0% {
+    width: 0;
+  }
+  35% {
+    width: 22ch;
+  }
+  85% {
+    width: 22ch;
+  }
+  100% {
+    width: 0;
+  }
+}
+
+@keyframes memo-caret {
+  50% {
+    border-right-color: transparent;
+  }
+}
+
+.results-page-enter {
+  animation: results-page-enter 520ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+.results-page-leaving {
+  opacity: 0;
+  transform: translateX(24px);
+  transition:
+    opacity 520ms cubic-bezier(0.2, 0.8, 0.2, 1),
+    transform 520ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+@keyframes results-page-enter {
+  from {
+    opacity: 0;
+    transform: translateX(24px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}

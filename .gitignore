@@ -1,0 +1,35 @@
+# Secrets
+.env
+.env.*
+!.env.sample
+
+# --- 赛后合规（CHALLENGE_AGREEMENT.md §2）---
+# 主办方数据包与任何 Cyanite 模型输出都不得进入本仓库：
+# 协议要求不得发布/再分发，且赛后须删除。本仓库的检索不依赖它们。
+/data/
+/response_*.json
+/guides/
+/notebooks/
+
+# macOS / editor / python
+.DS_Store
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+
+# python venv
+.venv/
+
+# node
+node_modules/
+
+# 运行时记忆（每用户 markdown，非源码）
+backend/memory/*.md
+
+# --- profile module runtime (do not commit secrets / Cyanite outputs) ---
+backend/**/.cache/
+backend/profile/memory/*.md
+backend/profile/memory/*.json
+!backend/profile/memory/.gitkeep
+backend/profile/analysis/*.png
+backend/profile/*.db
